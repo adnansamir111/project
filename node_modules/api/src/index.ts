@@ -5,6 +5,8 @@ import morgan from "morgan";
 import dotenv from "dotenv";
 import authRouter from "./routes/auth.routes";
 
+import orgRoutes from "./routes/orgs";
+
 
 import { pool } from "./db";
 import votesRouter from "./routes/votes.routes";
@@ -36,6 +38,8 @@ app.get("/health", async (req, res, next) => {
 app.use("/votes", votesRouter);
 
 app.use("/auth", authRouter);
+
+app.use("/orgs", orgRoutes);
 
 
 // ✅ 404 handler (if route not found)
