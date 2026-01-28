@@ -146,4 +146,48 @@ router.get("/:orgId/members", authMiddleware, async (req, res, next) => {
   }
 });
 
+// GET /orgs/my/organizations - get current user's organizations with their roles
+router.get("/my/organizations", authMiddleware, async (req, res, next) => {
+  try {
+    const userId = req.user!.user_id;
+
+    const { rows } = await pool.query(
+      `SELECT * FROM sp_get_user_organizations($1)`,
+      [userId]
+    );
+
+    return res.json({ ok: true, organizations: rows });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// GET /orgs/:orgId/my-role - get current user's role in specific organization
+router.get("/:orgId/my-role", authMiddleware, async (req, res, next) => {
+  try {
+    const userId = req.user!.user_id;
+    const orgId = parseIntParam(req.params.orgId as string, "orgId");
+
+    const { rows } = await pool.query(
+      `SELECT * FROM sp_get_user_org_role($1, $2)`,
+      [userId, orgId]
+    );
+
+    if (rows.length === 0) {
+      return res.status(404).json({
+        ok: false,
+        error: "User is not a member of this organization"
+      });
+    }
+
+    return res.json({
+      ok: true,
+      role: rows[0].role_name,
+      is_active: rows[0].is_active
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
 export default router;

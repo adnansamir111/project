@@ -4,10 +4,10 @@ import helmet from "helmet";
 import morgan from "morgan";
 import dotenv from "dotenv";
 import authRouter from "./routes/auth.routes";
-
 import orgRoutes from "./routes/orgs";
-
-
+import electionsRouter from "./routes/elections";
+import votingRouter from "./routes/voting";
+import racesRouter from "./routes/races";
 import { pool } from "./db";
 import votesRouter from "./routes/votes.routes";
 
@@ -27,7 +27,7 @@ app.get("/", (req, res) => {
 app.get("/health", async (req, res, next) => {
   try {
     const r = await pool.query("SELECT 1 as ok");
-    res.set("Cache-Control", "no-store"); 
+    res.set("Cache-Control", "no-store");
     res.json({ ok: true, db: r.rows[0].ok });
   } catch (e) {
     next(e);
@@ -40,6 +40,12 @@ app.use("/votes", votesRouter);
 app.use("/auth", authRouter);
 
 app.use("/orgs", orgRoutes);
+
+app.use("/elections", electionsRouter);
+
+app.use("/voting", votingRouter);
+
+app.use("/races", racesRouter);
 
 
 // ✅ 404 handler (if route not found)

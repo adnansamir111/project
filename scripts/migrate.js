@@ -41,7 +41,10 @@ async function main() {
       console.log("Done", file);
     } catch (e) {
       await client.query("ROLLBACK");
-      console.error("Failed", file, e);
+      console.error("Failed to apply migration:", file);
+      console.error("Error message:", e.message);
+      console.error("Error detail:", e.detail);
+      console.error("Full error:", JSON.stringify(e, null, 2));
       process.exit(1);
     }
   }
