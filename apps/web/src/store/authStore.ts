@@ -44,11 +44,19 @@ export const useAuthStore = create<AuthState>()(
             setCurrentOrganizationRole: (role) => set({ currentOrganizationRole: role }),
 
             setUserOrganizations: (orgs) => {
+                console.log('📋 setUserOrganizations called with:', orgs.map(o => ({ id: o.organization_id, name: o.organization_name, role: o.user_role })));
+
                 set({ userOrganizations: orgs });
 
-                // Auto-select first organization if none selected
+                // Auto-select first organization ONLY if:
+                // 1. No organization is currently selected AND
+                // 2. Organizations list was just populated
                 const current = get().currentOrganization;
+                console.log('🔍 Current organization before update:', current ? { id: current.organization_id, name: current.organization_name } : 'NONE');
+                console.log('🔍 Current role before update:', get().currentOrganizationRole);
+
                 if (!current && orgs.length > 0) {
+                    console.log('🆕 No org selected, auto-selecting first one');
                     const firstOrg = orgs[0];
                     set({
                         currentOrganization: {
@@ -60,14 +68,54 @@ export const useAuthStore = create<AuthState>()(
                         },
                         currentOrganizationRole: firstOrg.user_role,
                     });
+                    console.log('✅ Auto-selected:', { name: firstOrg.organization_name, role: firstOrg.user_role });
+                } else if (current && orgs.length > 0) {
+                    // If an org is already selected, update its data in case it changed
+                    const updatedOrg = orgs.find(o => o.organization_id === current.organization_id);
+                    console.log('🔄 Updating current org data:', updatedOrg ? { name: updatedOrg.organization_name, role: updatedOrg.user_role } : 'NOT FOUND IN NEW LIST');
+
+                    if (updatedOrg) {
+                        set({
+                            currentOrganization: {
+                                organization_id: updatedOrg.organization_id,
+                                organization_name: updatedOrg.organization_name,
+                                organization_type: updatedOrg.organization_type,
+                                organization_code: updatedOrg.organization_code,
+                                status: updatedOrg.organization_status,
+                            },
+                            currentOrganizationRole: updatedOrg.user_role,
+                        });
+                        console.log('✅ Updated current org role to:', updatedOrg.user_role);
+                    }
                 }
             },
 
             switchOrganization: (orgId) => {
                 const orgs = get().userOrganizations;
-                const targetOrg = orgs.find(o => o.organization_id === orgId);
+
+                console.log('🔍 DEBUG switchOrganization:', {
+                    searchingForOrgId: orgId,
+                    orgIdType: typeof orgId,
+                    totalOrgsAvailable: orgs.length,
+                    rawOrgs: orgs,
+                });
+
+                const targetOrg = orgs.find(o => {
+                    console.log(`Comparing: ${o.organization_id} (${typeof o.organization_id}) === ${orgId} (${typeof orgId})`);
+                    return String(o.organization_id) === String(orgId);
+                });
+
+                console.log('🔄 switchOrganization called:', {
+                    orgId,
+                    availableOrgs: orgs.map(o => ({ id: o.organization_id, name: o.organization_name, role: o.user_role })),
+                    targetOrg: targetOrg ? { id: targetOrg.organization_id, name: targetOrg.organization_name, role: targetOrg.user_role } : 'NOT FOUND'
+                });
 
                 if (targetOrg) {
+                    console.log('✅ Setting organization:', {
+                        orgName: targetOrg.organization_name,
+                        role: targetOrg.user_role
+                    });
                     set({
                         currentOrganization: {
                             organization_id: targetOrg.organization_id,
@@ -78,6 +126,10 @@ export const useAuthStore = create<AuthState>()(
                         },
                         currentOrganizationRole: targetOrg.user_role,
                     });
+                } else {
+                    console.error('❌ Organization not found in userOrganizations list!');
+                    console.error('Available org IDs:', orgs.map(o => o.organization_id));
+                    console.error('Tried to find org ID:', orgId);
                 }
             },
 

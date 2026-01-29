@@ -193,7 +193,7 @@ router.post("/cast", authMiddleware, async (req, res, next) => {
         if (err.code === "23505") {
             return res.status(409).json({
                 ok: false,
-                error: "Already voted in this race",
+                error: err.message || "Already voted for this candidate or maximum votes reached",
             });
         }
         next(err);
@@ -355,6 +355,86 @@ router.get("/pending", authMiddleware, async (req, res, next) => {
         return res.json({
             ok: true,
             pending_voters: rows,
+        });
+    } catch (err) {
+        next(err);
+    }
+});
+
+/**
+ * GET /voting/election-results/:electionId
+ * Get results for all races in an election
+ */
+router.get("/election-results/:electionId", authMiddleware, async (req, res, next) => {
+    try {
+        const userId = req.user!.user_id;
+        const electionId = parseIntParam(req.params.electionId as string, "electionId");
+
+        // Get election details and verify access
+        const electionCheck = await pool.query(
+            `SELECT e.election_id, e.election_name, e.organization_id, e.status, e.description
+       FROM elections e
+       WHERE e.election_id = $1`,
+            [electionId]
+        );
+
+        if (electionCheck.rows.length === 0) {
+            return res.status(404).json({
+                ok: false,
+                error: "Election not found",
+            });
+        }
+
+        const election = electionCheck.rows[0];
+
+        // Check if user is member of org
+        const memberCheck = await pool.query(
+            `SELECT 1 FROM org_members 
+       WHERE organization_id = $1 AND user_id = $2 AND is_active = TRUE`,
+            [election.organization_id, userId]
+        );
+
+        if (memberCheck.rows.length === 0) {
+            return res.status(403).json({
+                ok: false,
+                error: "Not authorized to view results",
+            });
+        }
+
+        // Get all races for this election
+        const racesResult = await pool.query(
+            `SELECT race_id, race_name, description, max_votes_per_voter, max_winners
+       FROM election_races
+       WHERE election_id = $1
+       ORDER BY race_id`,
+            [electionId]
+        );
+
+        // Get results for each race
+        const racesWithResults = await Promise.all(
+            racesResult.rows.map(async (race) => {
+                const resultsQuery = await pool.query(
+                    `SELECT * FROM sp_get_race_results($1, $2)`,
+                    [electionId, race.race_id]
+                );
+
+                return {
+                    ...race,
+                    results: resultsQuery.rows,
+                    total_votes: resultsQuery.rows.reduce((sum: number, r: any) => sum + parseInt(r.vote_count), 0)
+                };
+            })
+        );
+
+        return res.json({
+            ok: true,
+            election: {
+                election_id: election.election_id,
+                election_name: election.election_name,
+                description: election.description,
+                status: election.status
+            },
+            races: racesWithResults,
         });
     } catch (err) {
         next(err);

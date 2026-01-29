@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { Building2, CheckCircle } from 'lucide-react';
 import { useAuthStore } from '@/store/authStore';
 import { organizationsApi } from '@/lib/api';
@@ -13,6 +13,8 @@ export default function OrganizationSelector() {
         switchOrganization
     } = useAuthStore();
 
+    const [loading, setLoading] = useState(true);
+
     useEffect(() => {
         loadOrganizations();
     }, []);
@@ -23,17 +25,20 @@ export default function OrganizationSelector() {
             setUserOrganizations(orgs);
         } catch (error: any) {
             console.error('Failed to load organizations:', error);
-            toast.error('Failed to load your organizations');
+        } finally {
+            setLoading(false);
         }
     };
 
-    const handleOrgChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const handleOrgChange = async (e: React.ChangeEvent<HTMLSelectElement>) => {
         const orgId = parseInt(e.target.value);
         if (orgId) {
+            console.log('👉 User selected org ID:', orgId);
             switchOrganization(orgId);
             toast.success('Organization switched');
-            // Reload page to refresh data
-            window.location.reload();
+            // Removed page reload to test if state updates work
+            // await new Promise(resolve => setTimeout(resolve, 100));
+            // window.location.reload();
         }
     };
 
@@ -63,11 +68,23 @@ export default function OrganizationSelector() {
         }
     };
 
+    if (loading && userOrganizations.length === 0) {
+        return (
+            <div className="flex items-center space-x-2 text-sm text-gray-400 animate-pulse">
+                <Building2 className="w-4 h-4" />
+                <span>Loading...</span>
+            </div>
+        );
+    }
+
     if (userOrganizations.length === 0) {
         return (
             <div className="flex items-center space-x-2 text-sm text-gray-600">
                 <Building2 className="w-4 h-4" />
                 <span>No organizations</span>
+                <a href="/organizations" className="text-blue-600 hover:underline text-xs ml-2">
+                    Join one?
+                </a>
             </div>
         );
     }
@@ -102,7 +119,7 @@ export default function OrganizationSelector() {
 
             {/* Status Indicator */}
             {currentOrganization?.status === 'ACTIVE' && (
-                <CheckCircle className="w-4 h-4 text-green-500" title="Active Organization" />
+                <CheckCircle className="w-4 h-4 text-green-500" />
             )}
             {currentOrganization?.status === 'PENDING' && (
                 <span className="text-xs text-orange-600 font-medium">⏳ Pending Approval</span>

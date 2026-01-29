@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { Vote, Mail, Lock, Loader } from 'lucide-react';
+import { Vote, Mail, Lock, Sparkles } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { authApi } from '@/lib/api';
 import { useAuthStore } from '@/store/authStore';
@@ -34,7 +34,7 @@ export default function Login() {
                     is_active: true,
                 });
 
-                toast.success('Login successful!');
+                toast.success('Welcome back! 🎉');
                 navigate('/');
             } else {
                 toast.error(response.error || 'Login failed');
@@ -47,24 +47,30 @@ export default function Login() {
     };
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-primary-50 to-primary-100 flex items-center justify-center px-4">
+        <div className="min-h-screen flex items-center justify-center px-4 py-12">
             <div className="max-w-md w-full">
-                {/* Logo */}
+                {/* Logo and Header */}
                 <div className="text-center mb-8">
-                    <div className="inline-flex items-center justify-center w-16 h-16 bg-primary-600 rounded-full mb-4">
-                        <Vote className="w-10 h-10 text-white" />
+                    <div className="relative inline-block mb-6">
+                        <div className="absolute inset-0 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-3xl blur-2xl opacity-50"></div>
+                        <div className="relative p-4 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-3xl shadow-2xl">
+                            <Vote className="w-12 h-12 text-white" />
+                        </div>
                     </div>
-                    <h1 className="text-3xl font-bold text-gray-900">Election System</h1>
-                    <p className="text-gray-600 mt-2">Sign in to manage your elections</p>
+                    <h1 className="text-5xl font-black gradient-text mb-3">Election System</h1>
+                    <p className="text-slate-600 text-lg flex items-center justify-center space-x-2">
+                        <Sparkles className="w-5 h-5 text-blue-600" />
+                        <span>Sign in to manage your elections</span>
+                    </p>
                 </div>
 
                 {/* Login Form */}
-                <div className="card animate-fade-in">
+                <div className="glass-panel rounded-3xl p-8 shadow-2xl">
                     <form onSubmit={handleSubmit} className="space-y-6">
-                        <div>
-                            <label className="label">
-                                <Mail className="w-4 h-4 inline mr-2" />
-                                Email
+                        <div className="form-group">
+                            <label className="label flex items-center space-x-2">
+                                <Mail className="w-4 h-4 text-blue-600" />
+                                <span>Email Address</span>
                             </label>
                             <input
                                 type="email"
@@ -76,10 +82,10 @@ export default function Login() {
                             />
                         </div>
 
-                        <div>
-                            <label className="label">
-                                <Lock className="w-4 h-4 inline mr-2" />
-                                Password
+                        <div className="form-group">
+                            <label className="label flex items-center space-x-2">
+                                <Lock className="w-4 h-4 text-blue-600" />
+                                <span>Password</span>
                             </label>
                             <input
                                 type="password"
@@ -94,36 +100,48 @@ export default function Login() {
                         <button
                             type="submit"
                             disabled={loading}
-                            className="btn-primary w-full flex items-center justify-center space-x-2"
+                            className="btn-primary w-full flex items-center justify-center space-x-2 text-lg py-4"
                         >
                             {loading ? (
                                 <>
-                                    <Loader className="w-5 h-5 animate-spin" />
+                                    <div className="spinner w-5 h-5"></div>
                                     <span>Signing in...</span>
                                 </>
                             ) : (
-                                <span>Sign In</span>
+                                <>
+                                    <Vote className="w-5 h-5" />
+                                    <span>Sign In</span>
+                                </>
                             )}
                         </button>
                     </form>
 
                     <div className="mt-6 text-center">
-                        <p className="text-sm text-gray-600">
+                        <p className="text-sm text-slate-600">
                             Don't have an account?{' '}
-                            <Link to="/register" className="text-primary-600 hover:text-primary-700 font-medium">
-                                Sign up
+                            <Link to="/register" className="link font-semibold">
+                                Sign up now
                             </Link>
                         </p>
                     </div>
                 </div>
 
                 {/* Demo Credentials */}
-                <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                    <p className="text-sm text-blue-900 font-medium mb-2">Demo Credentials:</p>
-                    <p className="text-xs text-blue-700">Email: admin@test.com</p>
-                    <p className="text-xs text-blue-700">Password: password123</p>
+                <div className="mt-6 alert-info">
+                    <p className="font-semibold mb-2 flex items-center space-x-2">
+                        <Sparkles className="w-4 h-4" />
+                        <span>Demo Credentials</span>
+                    </p>
+                    <p className="text-sm">Email: <code className="bg-blue-100 px-2 py-0.5 rounded">admin@test.com</code></p>
+                    <p className="text-sm">Password: <code className="bg-blue-100 px-2 py-0.5 rounded">password123</code></p>
                 </div>
+
+                {/* Footer */}
+                <p className="text-center text-sm text-slate-500 mt-8">
+                    Secure, transparent, and democratic voting
+                </p>
             </div>
         </div>
     );
 }
+

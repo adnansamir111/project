@@ -84,6 +84,7 @@ export interface Race {
     race_name: string;
     description?: string;
     max_votes_per_voter: number;
+    max_winners: number;
     candidate_count?: number;
     candidates?: Candidate[];
 }
@@ -144,6 +145,8 @@ export interface VoteData {
     election_id: number;
     race_id: number;
     candidate_id: number;
+    voter_user_id?: number;
+    voter_id?: number;
 }
 
 export interface RaceResult {

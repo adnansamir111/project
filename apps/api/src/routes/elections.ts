@@ -295,6 +295,54 @@ router.post("/:electionId/open", authMiddleware, async (req, res, next) => {
 });
 
 /**
+ * POST /elections/:electionId/schedule
+ * Schedule election to open automatically (OWNER/ADMIN only)
+ * Body: { start_datetime, end_datetime }
+ */
+router.post("/:electionId/schedule", authMiddleware, async (req, res, next) => {
+    try {
+        const userId = req.user!.user_id;
+        const electionId = parseIntParam(req.params.electionId as string, "electionId");
+        const { start_datetime, end_datetime } = req.body;
+
+        if (!start_datetime || !end_datetime) {
+            return res.status(400).json({
+                ok: false,
+                error: "start_datetime and end_datetime are required",
+            });
+        }
+
+        await withTx(req, async (client) => {
+            await client.query(`SELECT sp_schedule_election($1, $2, $3, $4)`, [
+                electionId,
+                start_datetime,
+                end_datetime,
+                userId,
+            ]);
+        });
+
+        return res.json({
+            ok: true,
+            message: "Election scheduled successfully",
+        });
+    } catch (err: any) {
+        if (err.code === "28000") {
+            return res.status(403).json({
+                ok: false,
+                error: "Not authorized to schedule election",
+            });
+        }
+        if (err.code === "22023") {
+            return res.status(409).json({
+                ok: false,
+                error: err.message || "Cannot schedule election in current state",
+            });
+        }
+        next(err);
+    }
+});
+
+/**
  * POST /elections/:electionId/close
  * Close election (OWNER/ADMIN only)
  */
@@ -325,6 +373,43 @@ router.post("/:electionId/close", authMiddleware, async (req, res, next) => {
             return res.status(409).json({
                 ok: false,
                 error: err.message || "Cannot close election in current state",
+            });
+        }
+        next(err);
+    }
+});
+
+/**
+ * DELETE /elections/:electionId
+ * Delete election (OWNER/ADMIN only, cannot delete OPEN elections)
+ */
+router.delete("/:electionId", authMiddleware, async (req, res, next) => {
+    try {
+        const userId = req.user!.user_id;
+        const electionId = parseIntParam(req.params.electionId as string, "electionId");
+
+        await withTx(req, async (client) => {
+            await client.query(`SELECT sp_delete_election($1, $2)`, [
+                electionId,
+                userId,
+            ]);
+        });
+
+        return res.json({
+            ok: true,
+            message: "Election deleted successfully",
+        });
+    } catch (err: any) {
+        if (err.code === "28000") {
+            return res.status(403).json({
+                ok: false,
+                error: "Not authorized to delete election",
+            });
+        }
+        if (err.code === "22023") {
+            return res.status(409).json({
+                ok: false,
+                error: err.message || "Cannot delete election in current state",
             });
         }
         next(err);

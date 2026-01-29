@@ -11,6 +11,8 @@ import Elections from './pages/Elections';
 import ElectionDetails from './pages/ElectionDetails';
 import VoterPortal from './pages/VoterPortal';
 import Results from './pages/Results';
+import ResultsDashboard from './pages/ResultsDashboard';
+import UserProfile from './pages/UserProfile';
 
 // Layout
 import Layout from './components/Layout';
@@ -44,6 +46,8 @@ function App() {
           <Route path="elections/:id" element={<ElectionDetails />} />
           <Route path="vote" element={<VoterPortal />} />
           <Route path="results/:electionId/:raceId" element={<Results />} />
+          <Route path="results/:electionId" element={<ResultsDashboard />} />
+          <Route path="profile" element={<UserProfile />} />
         </Route>
 
         {/* Catch all */}

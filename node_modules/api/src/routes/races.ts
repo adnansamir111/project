@@ -88,14 +88,26 @@ router.get("/election/:electionId", authMiddleware, async (req, res, next) => {
     try {
         const electionId = parseIntParam(req.params.electionId as string, "electionId");
 
-        const { rows } = await pool.query(
+        const { rows: races } = await pool.query(
             `SELECT * FROM sp_get_races_for_election($1)`,
             [electionId]
         );
 
+        // Fetch candidates for each race
+        const racesWithCandidates = await Promise.all(races.map(async (race) => {
+            const { rows: candidates } = await pool.query(
+                `SELECT * FROM sp_get_candidates_for_race($1)`,
+                [race.race_id]
+            );
+            return {
+                ...race,
+                candidates
+            };
+        }));
+
         return res.json({
             ok: true,
-            races: rows,
+            races: racesWithCandidates,
         });
     } catch (err) {
         next(err);

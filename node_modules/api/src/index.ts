@@ -10,6 +10,7 @@ import votingRouter from "./routes/voting";
 import racesRouter from "./routes/races";
 import { pool } from "./db";
 import votesRouter from "./routes/votes.routes";
+import { electionScheduler } from "./services/electionScheduler";
 
 dotenv.config();
 
@@ -66,4 +67,9 @@ app.use((err: any, req: any, res: any, next: any) => {
 });
 
 const port = Number(process.env.PORT || 4000);
-app.listen(port, () => console.log(`API running: http://localhost:${port}`));
+app.listen(port, () => {
+  console.log(`API running: http://localhost:${port}`);
+
+  // Start election scheduler
+  electionScheduler.start();
+});

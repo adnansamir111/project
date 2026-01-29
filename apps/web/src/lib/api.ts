@@ -28,13 +28,29 @@ const api = axios.create({
     },
 });
 
-// Request interceptor to add auth token
+// Request interceptor to add auth token AND organization context
 api.interceptors.request.use(
     (config) => {
         const token = localStorage.getItem('accessToken');
         if (token) {
             config.headers.Authorization = `Bearer ${token}`;
         }
+
+        // Add current organization ID to all requests
+        const authStorage = localStorage.getItem('auth-storage');
+        if (authStorage) {
+            try {
+                const authState = JSON.parse(authStorage);
+                const currentOrgId = authState.state?.currentOrganization?.organization_id;
+                if (currentOrgId) {
+                    config.headers['X-Organization-Id'] = currentOrgId.toString();
+                    console.log('🌐 API Request with org:', currentOrgId, config.url);
+                }
+            } catch (e) {
+                console.error('Failed to parse auth storage:', e);
+            }
+        }
+
         return config;
     },
     (error) => Promise.reject(error)
@@ -98,6 +114,10 @@ export const organizationsApi = {
         await api.post(`/orgs/${orgId}/members`, { user_id: userId, role_name: roleName });
     },
 
+    removeMember: async (orgId: number, userId: number): Promise<void> => {
+        await api.delete(`/orgs/${orgId}/members/${userId}`);
+    },
+
     // Get user's organizations with roles
     getUserOrganizations: async (): Promise<UserOrganization[]> => {
         const response = await api.get('/orgs/my/organizations');
@@ -105,9 +125,28 @@ export const organizationsApi = {
     },
 
     // Get user's role in specific organization
+    // Get user's role in specific organization
     getUserRole: async (orgId: number): Promise<{ role: string; is_active: boolean }> => {
         const response = await api.get(`/orgs/${orgId}/my-role`);
         return response.data;
+    },
+
+    // Create invitation (Organizer)
+    createInvite: async (orgId: number, email: string) => {
+        const response = await api.post(`/orgs/${orgId}/invites`, { email });
+        return response.data; // { ok, token, email }
+    },
+
+    // Join organization (User)
+    join: async (token: string) => {
+        const response = await api.post(`/orgs/join`, { token });
+        return response.data;
+    },
+
+    // Get all organizations (for browsing)
+    getAll: async (): Promise<Organization[]> => {
+        const response = await api.get('/orgs/all');
+        return response.data.organizations || [];
     },
 };
 
@@ -132,12 +171,20 @@ export const electionsApi = {
         await api.put(`/elections/${id}`, data);
     },
 
+    schedule: async (id: number, start_datetime: string, end_datetime: string): Promise<void> => {
+        await api.post(`/elections/${id}/schedule`, { start_datetime, end_datetime });
+    },
+
     open: async (id: number): Promise<void> => {
         await api.post(`/elections/${id}/open`);
     },
 
     close: async (id: number): Promise<void> => {
         await api.post(`/elections/${id}/close`);
+    },
+
+    delete: async (id: number): Promise<void> => {
+        await api.delete(`/elections/${id}`);
     },
 };
 
@@ -211,6 +258,43 @@ export const votingApi = {
     getResults: async (electionId: number, raceId: number): Promise<ResultsResponse> => {
         const response = await api.get(`/voting/results?election_id=${electionId}&race_id=${raceId}`);
         return response.data;
+    },
+
+    getElectionResults: async (electionId: number): Promise<any> => {
+        const response = await api.get(`/voting/election-results/${electionId}`);
+        return response.data;
+    },
+};
+
+// Registration Requests API
+export const registrationApi = {
+    // User requests to join organization
+    requestToJoin: async (orgId: number, message?: string): Promise<{ request_id: number }> => {
+        const response = await api.post(`/orgs/${orgId}/request-join`, { message });
+        return response.data;
+    },
+
+    // Organizer gets pending join requests
+    getJoinRequests: async (orgId: number): Promise<any[]> => {
+        const response = await api.get(`/orgs/${orgId}/join-requests`);
+        return response.data.requests || [];
+    },
+
+    // Organizer approves join request
+    approveJoinRequest: async (requestId: number): Promise<{ token: string; user_email: string; user_name: string }> => {
+        const response = await api.post(`/orgs/join-requests/${requestId}/approve`);
+        return response.data;
+    },
+
+    // Organizer rejects join request
+    rejectJoinRequest: async (requestId: number): Promise<void> => {
+        await api.post(`/orgs/join-requests/${requestId}/reject`);
+    },
+
+    // User completes registration with token
+    completeRegistration: async (token: string): Promise<{ organization_id: number; organization_name: string }> => {
+        const response = await api.post('/orgs/complete-registration', { token });
+        return response.data.organization;
     },
 };
 
