@@ -215,6 +215,10 @@ export default function Organizations() {
         org.organization_code.toLowerCase().includes(searchTerm.toLowerCase())
     );
 
+    const visibleMyRequests = myRequests.filter(req =>
+        req.status !== 'APPROVED' || organizations.some(org => org.organization_code === req.organization_code)
+    );
+
     if (loading) {
         return (
             <div className="flex items-center justify-center h-96">
@@ -260,14 +264,14 @@ export default function Organizations() {
             </div>
 
             {/* My Organization Requests (hidden for super admin) */}
-            {!isSuperAdmin && myRequests.length > 0 && (
+            {!isSuperAdmin && visibleMyRequests.length > 0 && (
                 <div className="space-y-4">
                     <h2 className="text-xl font-bold text-slate-900 flex items-center space-x-2">
                         <FileText className="w-5 h-5 text-blue-600" />
                         <span>My Organization Requests</span>
                     </h2>
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                        {myRequests.map((req) => (
+                        {visibleMyRequests.map((req) => (
                             <div key={req.request_id} className="card border-l-4 border-l-blue-500">
                                 <div className="flex items-start justify-between mb-3">
                                     <div>

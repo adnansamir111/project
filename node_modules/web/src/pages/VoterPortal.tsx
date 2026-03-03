@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { Vote, CheckCircle, Clock, AlertCircle, Trophy, Sparkles } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { votingApi, electionsApi, racesApi } from '@/lib/api';
@@ -7,6 +8,7 @@ import type { VoterStatusResponse, Election, Race, VoteData } from '@/types';
 
 export default function VoterPortal() {
     const { currentOrganization } = useAuthStore();
+    const [searchParams] = useSearchParams();
     const [voterStatus, setVoterStatus] = useState<VoterStatusResponse | null>(null);
     const [elections, setElections] = useState<Election[]>([]);
     const [selectedElection, setSelectedElection] = useState<Election | null>(null);
@@ -20,6 +22,20 @@ export default function VoterPortal() {
             loadVoterData();
         }
     }, [currentOrganization]);
+
+    // Re-select the correct election whenever the election list or URL param changes
+    useEffect(() => {
+        if (elections.length === 0) return;
+        const electionIdParam = searchParams.get('election_id');
+        if (electionIdParam) {
+            const target = elections.find(e => String(e.election_id) === electionIdParam);
+            if (target) {
+                setSelectedElection(target);
+                return;
+            }
+        }
+        setSelectedElection(prev => prev ?? elections[0]);
+    }, [elections, searchParams]);
 
     useEffect(() => {
         if (selectedElection) {
@@ -44,10 +60,6 @@ export default function VoterPortal() {
             const electionsData = await electionsApi.list(currentOrganization.organization_id);
             const openElections = electionsData.filter(e => e.status === 'OPEN');
             setElections(openElections);
-
-            if (openElections.length > 0) {
-                setSelectedElection(openElections[0]);
-            }
         } catch (error: any) {
             toast.error('Failed to load voter data');
             console.error(error);

@@ -18,6 +18,14 @@ DECLARE
       r.created_at
     FROM organization_requests r
     WHERE r.requested_by = p_user_id
+      AND (
+        r.status <> 'APPROVED'
+        OR EXISTS (
+          SELECT 1
+          FROM organizations o
+          WHERE o.organization_code = r.organization_code
+        )
+      )
     ORDER BY r.created_at DESC;
   rec RECORD;
 BEGIN

@@ -263,7 +263,7 @@ export default function VoterDashboard() {
                         {openElections.map((election) => (
                             <Link
                                 key={election.election_id}
-                                to="/vote"
+                                to={`/vote?election_id=${election.election_id}`}
                                 className="block p-5 bg-gradient-to-br from-emerald-50 to-green-50 border-2 border-emerald-200 rounded-2xl hover:border-emerald-500 hover:shadow-xl transition-all duration-300 group"
                             >
                                 <div className="flex items-start justify-between mb-3">
