@@ -156,7 +156,7 @@ router.post("/:orgId/members", authMiddleware, async (req, res, next) => {
   }
 });
 
-// NOTE: Member listing route moved to line 458 (uses sp_get_org_members_detailed)
+
 
 // POST /orgs/:orgId/invites - create invitation
 router.post("/:orgId/invites", authMiddleware, async (req, res, next) => {
