@@ -4,8 +4,6 @@ import { pool } from "../db";
 import { authMiddleware } from "../middleware/auth";
 import { withTx } from "../tx";
 
-import { isSuperAdmin } from "../middleware/superAdmin";
-
 const router = Router();
 
 function parseIntParam(value: string, name: string) {
@@ -33,50 +31,13 @@ router.get("/all", authMiddleware, async (req, res, next) => {
   }
 });
 
-// POST /orgs - create organization (SUPER ADMIN ONLY - regular users must use /admin/org-requests)
-router.post("/", authMiddleware, async (req, res, next) => {
-  try {
-    const userId = req.user!.user_id;
-
-    // Only super admin can create orgs directly
-    const isAdmin = await isSuperAdmin(userId);
-    if (!isAdmin) {
-      return res.status(403).json({
-        ok: false,
-        error: "Direct organization creation is restricted. Please submit a request via the organization request form.",
-      });
-    }
-
-    const { organization_name, organization_type, organization_code } = req.body;
-
-    if (!organization_name || !organization_type || !organization_code) {
-      return res.status(400).json({
-        ok: false,
-        error: "organization_name, organization_type, organization_code are required",
-      });
-    }
-
-    const orgId = await withTx(req, async (client) => {
-      const { rows } = await client.query(
-        `SELECT sp_create_organization($1, $2, $3, $4) AS org_id`,
-        [organization_name, organization_type, organization_code, userId]
-      );
-      return rows[0].org_id;
-    });
-
-    return res.status(201).json({
-      ok: true,
-      organization_id: orgId,
-      organization_name,
-      organization_type,
-      organization_code,
-    });
-  } catch (err: any) {
-    if (err.code === "23505") {
-      return res.status(409).json({ ok: false, error: "organization_code already exists" });
-    }
-    next(err);
-  }
+// POST /orgs - direct creation disabled; use organization request + superadmin approval flow
+router.post("/", authMiddleware, async (_req, res) => {
+  return res.status(403).json({
+    ok: false,
+    error:
+      "Direct organization creation is disabled. Please submit an organization request for super admin approval.",
+  });
 });
 
 // POST /orgs/join - accept invite

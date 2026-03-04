@@ -235,50 +235,19 @@ router.get("/check", authMiddleware, async (req, res, next) => {
 
 /**
  * POST /admin/org-create
- * Super admin directly creates an organization (skips request flow)
- * Body: { organization_name, organization_type, organization_code }
+ * Deprecated: direct org creation is disabled.
+ * Super admin must approve organization requests via /admin/org-requests/:requestId/approve.
  */
 router.post(
   "/org-create",
   authMiddleware,
   superAdminMiddleware,
-  async (req, res, next) => {
-    try {
-      const userId = req.user!.user_id;
-      const { organization_name, organization_type, organization_code } =
-        req.body;
-
-      if (!organization_name || !organization_type || !organization_code) {
-        return res.status(400).json({
-          ok: false,
-          error:
-            "organization_name, organization_type, and organization_code are required",
-        });
-      }
-
-      const orgId = await withTx(req, async (client) => {
-        const { rows } = await client.query(
-          `SELECT sp_create_organization($1, $2, $3, $4) AS org_id`,
-          [organization_name, organization_type, organization_code, userId]
-        );
-        return rows[0].org_id;
-      });
-
-      return res.status(201).json({
-        ok: true,
-        organization_id: orgId,
-        organization_name,
-        organization_type,
-        organization_code,
-      });
-    } catch (err: any) {
-      if (err.code === "23505") {
-        return res
-          .status(409)
-          .json({ ok: false, error: "organization_code already exists" });
-      }
-      next(err);
-    }
+  async (_req, res) => {
+    return res.status(403).json({
+      ok: false,
+      error:
+        "Direct organization creation is disabled. Please approve a submitted organization request.",
+    });
   }
 );
 
