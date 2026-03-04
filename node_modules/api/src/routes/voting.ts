@@ -16,118 +16,14 @@ function parseIntParam(value: string, name: string): number {
     return n;
 }
 
-/**
- * POST /voting/register
- * Register current user as voter in organization
- * Body: { organization_id }
+/*
+ * Manual voter workflow disabled (redundant with auto-voter trigger on org_members):
+ * - POST /voting/register
+ * - POST /voting/approve
+ *
+ * Current policy: when a user is added/activated as MEMBER in org_members,
+ * trigger trg_org_members_auto_voter auto-creates/approves voter record.
  */
-router.post("/register", authMiddleware, async (req, res, next) => {
-    try {
-        const userId = req.user!.user_id;
-        const { organization_id } = req.body;
-
-        if (!organization_id) {
-            return res.status(400).json({
-                ok: false,
-                error: "organization_id is required",
-            });
-        }
-
-        const orgId = Number(organization_id);
-        if (!Number.isInteger(orgId) || orgId <= 0) {
-            return res.status(400).json({
-                ok: false,
-                error: "organization_id must be a positive integer",
-            });
-        }
-
-        await withTx(req, async (client) => {
-            await client.query(`SELECT sp_register_voter($1, $2)`, [orgId, userId]);
-        });
-
-        return res.status(201).json({
-            ok: true,
-            message: "Voter registration submitted for approval",
-        });
-    } catch (err: any) {
-        if (err.code === "22023") {
-            return res.status(400).json({
-                ok: false,
-                error: err.message || "Invalid voter registration",
-            });
-        }
-        if (err.code === "23505") {
-            return res.status(409).json({
-                ok: false,
-                error: "Already registered as voter in this organization",
-            });
-        }
-        next(err);
-    }
-});
-
-/**
- * POST /voting/approve
- * Approve a voter registration (OWNER/ADMIN only)
- * Body: { organization_id, user_id }
- */
-router.post("/approve", authMiddleware, async (req, res, next) => {
-    try {
-        const approverId = req.user!.user_id;
-        const { organization_id, user_id } = req.body;
-
-        if (!organization_id || !user_id) {
-            return res.status(400).json({
-                ok: false,
-                error: "organization_id and user_id are required",
-            });
-        }
-
-        const orgId = Number(organization_id);
-        const voterId = Number(user_id);
-
-        if (!Number.isInteger(orgId) || orgId <= 0) {
-            return res.status(400).json({
-                ok: false,
-                error: "organization_id must be a positive integer",
-            });
-        }
-
-        if (!Number.isInteger(voterId) || voterId <= 0) {
-            return res.status(400).json({
-                ok: false,
-                error: "user_id must be a positive integer",
-            });
-        }
-
-        await withTx(req, async (client) => {
-            await client.query(`SELECT sp_approve_voter($1, $2, $3)`, [
-                orgId,
-                voterId,
-                approverId,
-            ]);
-        });
-
-        return res.json({
-            ok: true,
-            message: "Voter approved successfully",
-        });
-    } catch (err: any) {
-        if (err.code === "28000") {
-            return res.status(403).json({
-                ok: false,
-                error: "Not authorized to approve voters",
-            });
-        }
-        if (err.code === "22023") {
-            return res.status(404).json({
-                ok: false,
-                error: err.message || "Voter registration not found",
-            });
-        }
-        next(err);
-    }
-});
 
 /**
  * POST /voting/cast

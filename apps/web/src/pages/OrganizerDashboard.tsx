@@ -33,11 +33,7 @@ export default function OrganizerDashboard() {
         draftElections: 0,
         activeElections: 0,
     });
-    const [showInviteModal, setShowInviteModal] = useState(false);
     const [showCSVModal, setShowCSVModal] = useState(false);
-    const [inviteEmail, setInviteEmail] = useState('');
-    const [inviteResult, setInviteResult] = useState<{ token: string, email: string } | null>(null);
-    const [inviting, setInviting] = useState(false);
 
     // Join requests state
     const [joinRequests, setJoinRequests] = useState<any[]>([]);
@@ -87,34 +83,6 @@ export default function OrganizerDashboard() {
         } finally {
             setLoading(false);
         }
-    };
-
-    const handleInviteVoter = async (e: React.FormEvent) => {
-        e.preventDefault();
-        if (!currentOrganization) return;
-
-        setInviting(true);
-        try {
-            const result = await organizationsApi.createInvite(currentOrganization.organization_id, inviteEmail);
-            setInviteResult(result);
-            toast.success('Invitation created!');
-        } catch (error: any) {
-            toast.error(error.response?.data?.error || 'Failed to create invitation');
-        } finally {
-            setInviting(false);
-        }
-    };
-
-    const copyInviteToClipboard = () => {
-        if (!inviteResult) return;
-        navigator.clipboard.writeText(inviteResult.token);
-        toast.success('Token copied to clipboard');
-    };
-
-    const closeInviteModal = () => {
-        setShowInviteModal(false);
-        setInviteResult(null);
-        setInviteEmail('');
     };
 
     // Join request handlers
@@ -342,20 +310,6 @@ export default function OrganizerDashboard() {
                             <p className="text-sm text-slate-500">Set up a new election</p>
                         </div>
                     </Link>
-
-                    <button
-                        onClick={() => setShowInviteModal(true)}
-                        disabled={!currentOrganization}
-                        className={`group relative overflow-hidden p-6 border-2 border-dashed border-slate-300 rounded-2xl transition-all duration-300 ${!currentOrganization ? 'opacity-50 cursor-not-allowed bg-slate-50' : 'hover:border-emerald-500 hover:bg-gradient-to-br hover:from-emerald-50 hover:to-green-50'}`}
-                    >
-                        <div className="flex flex-col items-center text-center space-y-3">
-                            <div className="p-4 bg-emerald-100 rounded-2xl group-hover:scale-110 transition-transform">
-                                <Users className="w-8 h-8 text-emerald-600" />
-                            </div>
-                            <span className="font-bold text-slate-700 group-hover:text-emerald-600">Invite Voters</span>
-                            <p className="text-sm text-slate-500">Generate invitation tokens</p>
-                        </div>
-                    </button>
 
                     <button
                         onClick={() => setShowCSVModal(true)}
@@ -598,81 +552,6 @@ export default function OrganizerDashboard() {
                         <Plus className="w-5 h-5 mr-2" />
                         Create Organization
                     </Link>
-                </div>
-            )}
-
-            {/* Invite Modal */}
-            {showInviteModal && (
-                <div className="modal-overlay" onClick={closeInviteModal}>
-                    <div className="modal-content p-8 max-w-md" onClick={(e) => e.stopPropagation()}>
-                        <div className="flex items-center justify-between mb-6">
-                            <h2 className="text-2xl font-bold text-slate-900">Invite Voter</h2>
-                            <button onClick={closeInviteModal} className="p-2 hover:bg-slate-100 rounded-lg">
-                                <X className="w-6 h-6" />
-                            </button>
-                        </div>
-
-                        {!inviteResult ? (
-                            <form onSubmit={handleInviteVoter} className="space-y-6">
-                                <div className="form-group">
-                                    <label className="label">Voter Email</label>
-                                    <input
-                                        type="email"
-                                        className="input"
-                                        value={inviteEmail}
-                                        onChange={(e) => setInviteEmail(e.target.value)}
-                                        placeholder="voter@example.com"
-                                        required
-                                    />
-                                    <p className="text-xs text-slate-500 mt-1">
-                                        We'll generate a secure token for this user to join.
-                                    </p>
-                                </div>
-                                <div className="flex space-x-3 pt-4">
-                                    <button
-                                        type="submit"
-                                        className="btn-primary flex-1"
-                                        disabled={inviting || !inviteEmail}
-                                    >
-                                        {inviting ? 'Generating...' : 'Generate Invite Token'}
-                                    </button>
-                                </div>
-                            </form>
-                        ) : (
-                            <div className="space-y-6">
-                                <div className="alert-success">
-                                    <p className="font-semibold">Invitation Generated!</p>
-                                    <p className="text-sm">Share this token with the voter:</p>
-                                </div>
-
-                                <div className="p-4 bg-slate-100 rounded-xl border border-slate-200">
-                                    <p className="text-xs text-slate-500 mb-1">Invitation Token</p>
-                                    <div className="flex items-center justify-between">
-                                        <code className="text-lg font-mono font-bold text-slate-900 select-all">
-                                            {inviteResult.token}
-                                        </code>
-                                        <button
-                                            onClick={copyInviteToClipboard}
-                                            className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg ml-2"
-                                            title="Copy to clipboard"
-                                        >
-                                            <Sparkles className="w-5 h-5" />
-                                        </button>
-                                    </div>
-                                </div>
-
-                                <div className="alert-info">
-                                    <p className="text-sm">
-                                        Only <strong>{inviteResult.email}</strong> can use this token. It expires in 7 days.
-                                    </p>
-                                </div>
-
-                                <button onClick={closeInviteModal} className="btn-primary w-full">
-                                    Done
-                                </button>
-                            </div>
-                        )}
-                    </div>
                 </div>
             )}
 

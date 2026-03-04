@@ -141,12 +141,6 @@ export const organizationsApi = {
         return response.data;
     },
 
-    // Create invitation (Organizer)
-    createInvite: async (orgId: number, email: string) => {
-        const response = await api.post(`/orgs/${orgId}/invites`, { email });
-        return response.data; // { ok, token, email }
-    },
-
     // Join organization (User)
     join: async (token: string) => {
         const response = await api.post(`/orgs/join`, { token });
