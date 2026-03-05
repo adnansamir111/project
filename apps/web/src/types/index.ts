@@ -58,6 +58,35 @@ export interface OrgMember {
     joined_at: string;
 }
 
+// Organization Request Types
+export type OrgRequestStatus = 'PENDING' | 'APPROVED' | 'REJECTED';
+
+export interface OrgRequest {
+    request_id: number;
+    requested_by: number;
+    requester_username?: string;
+    requester_email?: string;
+    organization_name: string;
+    organization_type: string;
+    organization_code: string;
+    purpose?: string;
+    expected_members?: number;
+    proof_document_url?: string;
+    status: OrgRequestStatus;
+    admin_notes?: string;
+    reviewed_at?: string;
+    created_at: string;
+}
+
+export interface OrgRequestFormData {
+    organization_name: string;
+    organization_type: string;
+    organization_code: string;
+    purpose?: string;
+    expected_members?: number;
+    proof_document?: File | null;
+}
+
 // Election Types
 export type ElectionStatus = 'DRAFT' | 'SCHEDULED' | 'OPEN' | 'CLOSED' | 'ARCHIVED';
 
@@ -94,6 +123,7 @@ export interface RaceFormData {
     race_name: string;
     description?: string;
     max_votes_per_voter: number;
+    max_winners: number;
 }
 
 // Candidate Types
@@ -103,6 +133,7 @@ export interface Candidate {
     affiliation_name?: string;
     bio?: string;
     manifesto?: string;
+    photo_url?: string;
     is_approved: boolean;
     ballot_order?: number;
     display_name?: string;
@@ -114,6 +145,7 @@ export interface CandidateFormData {
     bio?: string;
     manifesto?: string;
     ballot_order?: number;
+    photo?: File | null;
 }
 
 // Voter Types
@@ -179,3 +211,52 @@ export interface PaginatedResponse<T> {
     page: number;
     limit: number;
 }
+
+// Invitation Types
+export type InvitationStatus = 'PENDING' | 'ACCEPTED' | 'EXPIRED' | 'REVOKED';
+
+export interface Invitation {
+    invite_id: number;
+    email: string;
+    role_name: 'OWNER' | 'ADMIN' | 'MEMBER';
+    status: InvitationStatus;
+    created_at: string;
+    expires_at: string;
+    email_sent: boolean;
+    email_sent_at?: string;
+}
+
+export interface InvitationValidation {
+    ok: boolean;
+    valid: boolean;
+    email: string;
+    organization: {
+        id: number;
+        name: string;
+    };
+    role: string;
+    expires_at: string;
+    user_exists: boolean;
+    user_id?: number;
+}
+
+export interface BulkUploadResult {
+    ok: boolean;
+    batch_id: number;
+    summary: {
+        total: number;
+        successful: number;
+        failed: number;
+        invalid_emails: number;
+        emails_sent: number;
+        emails_failed: number;
+    };
+    results: Array<{
+        email: string;
+        status: string;
+        message: string;
+        invite_id?: number;
+    }>;
+    invalidEmails?: string[];
+}
+

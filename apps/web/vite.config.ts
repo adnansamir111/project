@@ -12,11 +12,16 @@ export default defineConfig({
   },
   server: {
     port: 3000,
+    strictPort: true, // Fail if port 3000 is in use instead of switching ports
     proxy: {
       '/api': {
         target: 'http://localhost:4000',
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/api/, ''),
+      },
+      '/uploads': {
+        target: 'http://localhost:4000',
+        changeOrigin: true,
       },
     },
   },

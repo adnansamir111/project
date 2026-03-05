@@ -16,6 +16,11 @@ import type {
     ResultsResponse,
     Voter,
     OrgMember,
+    Invitation,
+    InvitationValidation,
+    BulkUploadResult,
+    OrgRequest,
+    OrgRequestFormData,
 } from '@/types';
 
 const API_BASE_URL = '/api';
@@ -118,6 +123,11 @@ export const organizationsApi = {
         await api.delete(`/orgs/${orgId}/members/${userId}`);
     },
 
+    // Delete organization (OWNER only) - cascades to all related data
+    deleteOrganization: async (orgId: number): Promise<void> => {
+        await api.delete(`/orgs/${orgId}`);
+    },
+
     // Get user's organizations with roles
     getUserOrganizations: async (): Promise<UserOrganization[]> => {
         const response = await api.get('/orgs/my/organizations');
@@ -186,6 +196,16 @@ export const electionsApi = {
     delete: async (id: number): Promise<void> => {
         await api.delete(`/elections/${id}`);
     },
+
+    getReport: async (id: number): Promise<any[]> => {
+        const response = await api.get(`/elections/${id}/report`);
+        return response.data.report || [];
+    },
+
+    getSummary: async (id: number): Promise<any> => {
+        const response = await api.get(`/elections/${id}/summary`);
+        return response.data.summary;
+    },
 };
 
 // Races API
@@ -217,12 +237,29 @@ export const racesApi = {
 // Candidates API
 export const candidatesApi = {
     add: async (raceId: number, data: CandidateFormData): Promise<Candidate> => {
-        const response = await api.post(`/races/${raceId}/candidates`, data);
+        const formData = new FormData();
+        formData.append('full_name', data.full_name);
+        if (data.affiliation_name) formData.append('affiliation_name', data.affiliation_name);
+        if (data.bio) formData.append('bio', data.bio);
+        if (data.manifesto) formData.append('manifesto', data.manifesto);
+        if (data.ballot_order) formData.append('ballot_order', String(data.ballot_order));
+        if (data.photo) formData.append('photo', data.photo);
+        const response = await api.post(`/races/${raceId}/candidates`, formData, {
+            headers: { 'Content-Type': 'multipart/form-data' },
+        });
         return response.data;
     },
 
     update: async (raceId: number, candidateId: number, data: CandidateFormData): Promise<void> => {
-        await api.put(`/races/${raceId}/candidates/${candidateId}`, data);
+        const formData = new FormData();
+        formData.append('full_name', data.full_name);
+        if (data.affiliation_name) formData.append('affiliation_name', data.affiliation_name);
+        if (data.bio) formData.append('bio', data.bio);
+        if (data.manifesto) formData.append('manifesto', data.manifesto);
+        if (data.photo) formData.append('photo', data.photo);
+        await api.put(`/races/${raceId}/candidates/${candidateId}`, formData, {
+            headers: { 'Content-Type': 'multipart/form-data' },
+        });
     },
 
     remove: async (raceId: number, candidateId: number): Promise<void> => {
@@ -295,6 +332,146 @@ export const registrationApi = {
     completeRegistration: async (token: string): Promise<{ organization_id: number; organization_name: string }> => {
         const response = await api.post('/orgs/complete-registration', { token });
         return response.data.organization;
+    },
+};
+
+// Invitations API
+export const invitationsApi = {
+    // Upload CSV with emails (Owner/Admin)
+    bulkUpload: async (orgId: number, file: File, options?: { role_name?: string; days_valid?: number; send_emails?: boolean }): Promise<BulkUploadResult> => {
+        const formData = new FormData();
+        formData.append('csv', file);
+        if (options?.role_name) formData.append('role_name', options.role_name);
+        if (options?.days_valid) formData.append('days_valid', options.days_valid.toString());
+        if (options?.send_emails !== undefined) formData.append('send_emails', options.send_emails.toString());
+
+        const response = await api.post(`/invitations/bulk-upload/${orgId}`, formData, {
+            headers: { 'Content-Type': 'multipart/form-data' },
+        });
+        return response.data;
+    },
+
+    // Validate invite token (public - no auth needed)
+    validateToken: async (token: string): Promise<InvitationValidation> => {
+        const response = await api.get(`/invitations/validate?token=${token}`);
+        return response.data;
+    },
+
+    // Accept invitation (logged-in user)
+    accept: async (token: string): Promise<{ ok: boolean; organization: { id: number; name: string; role: string } }> => {
+        const response = await api.post('/invitations/accept', { token });
+        return response.data;
+    },
+
+    // Register with invitation token (new user)
+    registerWithInvite: async (data: { token: string; username: string; email: string; password: string }): Promise<AuthResponse & { organization: { id: number; name: string; role: string } }> => {
+        const response = await api.post('/invitations/register', data);
+        return response.data;
+    },
+
+    // Get organization's invitations (Admin/Owner)
+    getOrgInvitations: async (orgId: number): Promise<Invitation[]> => {
+        const response = await api.get(`/invitations/${orgId}`);
+        return response.data.invitations || [];
+    },
+
+    // Resend invitation
+    resend: async (inviteId: number): Promise<{ ok: boolean; email: string; expires_at: string }> => {
+        const response = await api.post(`/invitations/${inviteId}/resend`);
+        return response.data;
+    },
+
+    // Revoke invitation
+    revoke: async (inviteId: number): Promise<void> => {
+        await api.delete(`/invitations/${inviteId}`);
+    },
+
+    // Get batch upload history
+    getBatches: async (orgId: number): Promise<any[]> => {
+        const response = await api.get(`/invitations/batches/${orgId}`);
+        return response.data.batches || [];
+    },
+};
+
+// Admin / Organization Requests API
+export const adminApi = {
+    // Check if current user is super admin
+    checkSuperAdmin: async (): Promise<boolean> => {
+        try {
+            const response = await api.get('/admin/check');
+            return response.data.is_super_admin === true;
+        } catch {
+            return false;
+        }
+    },
+
+    // Submit organization request (regular user)
+    submitOrgRequest: async (data: OrgRequestFormData): Promise<{ request_id: number }> => {
+        const formData = new FormData();
+        formData.append('organization_name', data.organization_name);
+        formData.append('organization_type', data.organization_type);
+        formData.append('organization_code', data.organization_code);
+        if (data.purpose) formData.append('purpose', data.purpose);
+        if (data.expected_members) formData.append('expected_members', String(data.expected_members));
+        if (data.proof_document) formData.append('proof_document', data.proof_document);
+        const response = await api.post('/admin/org-requests', formData, {
+            headers: { 'Content-Type': 'multipart/form-data' },
+        });
+        return response.data;
+    },
+
+    // Get my own requests
+    getMyRequests: async (): Promise<OrgRequest[]> => {
+        const response = await api.get('/admin/org-requests/my');
+        return response.data.requests || [];
+    },
+
+    // Get all requests (super admin only)
+    getAllRequests: async (status?: string): Promise<OrgRequest[]> => {
+        const url = status ? `/admin/org-requests?status=${status}` : '/admin/org-requests';
+        const response = await api.get(url);
+        return response.data.requests || [];
+    },
+
+    // Approve request (super admin)
+    approveRequest: async (requestId: number, adminNotes?: string): Promise<{ organization_id: number }> => {
+        const response = await api.post(`/admin/org-requests/${requestId}/approve`, { admin_notes: adminNotes });
+        return response.data;
+    },
+
+    // Reject request (super admin)
+    rejectRequest: async (requestId: number, adminNotes?: string): Promise<void> => {
+        await api.post(`/admin/org-requests/${requestId}/reject`, { admin_notes: adminNotes });
+    },
+
+    // Super admin direct create
+    createOrganization: async (data: { organization_name: string; organization_type: string; organization_code: string }): Promise<Organization> => {
+        const response = await api.post('/admin/org-create', data);
+        return response.data;
+    },
+
+    // Platform stats (super admin)
+    getStats: async (): Promise<{
+        stats: {
+            total_users: number;
+            total_organizations: number;
+            total_elections: number;
+            total_votes: number;
+            pending_requests: number;
+        };
+        recent_users: { user_id: number; username: string; email: string; created_at: string }[];
+        organizations: {
+            organization_id: number;
+            organization_name: string;
+            organization_type: string;
+            organization_code: string;
+            created_at: string;
+            member_count: number;
+            election_count: number;
+        }[];
+    }> => {
+        const response = await api.get('/admin/stats');
+        return response.data;
     },
 };
 

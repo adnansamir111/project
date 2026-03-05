@@ -3,14 +3,18 @@ import cors from "cors";
 import helmet from "helmet";
 import morgan from "morgan";
 import dotenv from "dotenv";
+import path from "path";
 import authRouter from "./routes/auth.routes";
 import orgRoutes from "./routes/orgs";
 import electionsRouter from "./routes/elections";
 import votingRouter from "./routes/voting";
 import racesRouter from "./routes/races";
+import invitationsRouter from "./routes/invitations";
+import adminRouter from "./routes/admin";
 import { pool } from "./db";
 import votesRouter from "./routes/votes.routes";
 import { electionScheduler } from "./services/electionScheduler";
+import { uploadsPath } from "./upload";
 
 dotenv.config();
 
@@ -18,8 +22,11 @@ const app = express();
 
 app.use(express.json());
 app.use(cors());
-app.use(helmet());
+app.use(helmet({ crossOriginResourcePolicy: { policy: "cross-origin" } }));
 app.use(morgan("dev"));
+
+// Serve uploaded files statically
+app.use("/uploads", express.static(uploadsPath));
 
 app.get("/", (req, res) => {
   res.send("API is running. Go to /health");
@@ -47,6 +54,10 @@ app.use("/elections", electionsRouter);
 app.use("/voting", votingRouter);
 
 app.use("/races", racesRouter);
+
+app.use("/invitations", invitationsRouter);
+
+app.use("/admin", adminRouter);
 
 
 // ✅ 404 handler (if route not found)

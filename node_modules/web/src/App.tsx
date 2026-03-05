@@ -12,7 +12,10 @@ import ElectionDetails from './pages/ElectionDetails';
 import VoterPortal from './pages/VoterPortal';
 import Results from './pages/Results';
 import ResultsDashboard from './pages/ResultsDashboard';
+import ElectionReport from './pages/ElectionReport';
 import UserProfile from './pages/UserProfile';
+import InvitePage from './pages/InvitePage';
+import SuperAdminDashboard from './pages/SuperAdminDashboard';
 
 // Layout
 import Layout from './components/Layout';
@@ -30,6 +33,7 @@ function App() {
         {/* Public Routes */}
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
+        <Route path="/invite" element={<InvitePage />} />
 
         {/* Private Routes */}
         <Route
@@ -47,7 +51,9 @@ function App() {
           <Route path="vote" element={<VoterPortal />} />
           <Route path="results/:electionId/:raceId" element={<Results />} />
           <Route path="results/:electionId" element={<ResultsDashboard />} />
+          <Route path="report/:electionId" element={<ElectionReport />} />
           <Route path="profile" element={<UserProfile />} />
+          <Route path="admin" element={<SuperAdminDashboard />} />
         </Route>
 
         {/* Catch all */}

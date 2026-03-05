@@ -1,12 +1,19 @@
 import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom';
-import { LogOut, Home, Building2, Vote, BarChart3, Users, Sparkles } from 'lucide-react';
+import { LogOut, Home, Building2, Vote, BarChart3, Users, Shield } from 'lucide-react';
+import { useState, useEffect } from 'react';
 import { useAuthStore } from '@/store/authStore';
+import { adminApi } from '@/lib/api';
 import OrganizationSelector from './OrganizationSelector';
 
 export default function Layout() {
     const navigate = useNavigate();
     const location = useLocation();
     const { user, logout, currentOrganizationRole } = useAuthStore();
+    const [isSuperAdmin, setIsSuperAdmin] = useState(false);
+
+    useEffect(() => {
+        adminApi.checkSuperAdmin().then(setIsSuperAdmin);
+    }, []);
 
     const handleLogout = () => {
         logout();
@@ -47,10 +54,6 @@ export default function Layout() {
                                 </div>
                                 <div>
                                     <span className="text-2xl font-bold gradient-text">Election System</span>
-                                    <div className="flex items-center space-x-1 text-xs text-slate-500">
-                                        <Sparkles className="w-3 h-3" />
-                                        <span>Powered by Democracy</span>
-                                    </div>
                                 </div>
                             </Link>
 
@@ -64,15 +67,23 @@ export default function Layout() {
                                     <Building2 className="w-4 h-4" />
                                     <span>Organizations</span>
                                 </Link>
-                                <Link to="/elections" className={navLinkClass('/elections')}>
-                                    <BarChart3 className="w-4 h-4" />
-                                    <span>Elections</span>
-                                </Link>
+                                {!isSuperAdmin && (
+                                    <Link to="/elections" className={navLinkClass('/elections')}>
+                                        <BarChart3 className="w-4 h-4" />
+                                        <span>Elections</span>
+                                    </Link>
+                                )}
                                 {/* Only show Vote tab for MEMBER role */}
-                                {canVote && (
+                                {!isSuperAdmin && canVote && (
                                     <Link to="/vote" className={navLinkClass('/vote')}>
                                         <Users className="w-4 h-4" />
                                         <span>Vote</span>
+                                    </Link>
+                                )}
+                                {isSuperAdmin && (
+                                    <Link to="/admin" className={navLinkClass('/admin')}>
+                                        <Shield className="w-4 h-4" />
+                                        <span>Admin</span>
                                     </Link>
                                 )}
                             </nav>
@@ -80,23 +91,38 @@ export default function Layout() {
 
                         {/* Right Side Actions */}
                         <div className="flex items-center space-x-4">
-                            {/* Organization Selector */}
-                            <OrganizationSelector />
+                            {/* Organization Selector (hidden for super admin) */}
+                            {!isSuperAdmin && <OrganizationSelector />}
 
                             {/* User Profile */}
                             <div className="flex items-center space-x-3 border-l border-slate-200 pl-4">
-                                <Link to="/profile" className="flex items-center space-x-3 group cursor-pointer">
-                                    <div className="text-right hidden sm:block">
-                                        <p className="text-sm font-semibold text-slate-900 group-hover:text-blue-600 transition-colors">{user?.username}</p>
-                                        <p className="text-xs text-slate-500">{user?.email}</p>
-                                    </div>
-                                    <div className="relative">
-                                        <div className="w-10 h-10 rounded-full bg-gradient-to-r from-blue-600 to-indigo-600 flex items-center justify-center text-white font-bold shadow-lg group-hover:scale-105 transition-transform">
-                                            {user?.username?.charAt(0).toUpperCase()}
+                                {isSuperAdmin ? (
+                                    <div className="flex items-center space-x-3">
+                                        <div className="text-right hidden sm:block">
+                                            <p className="text-sm font-semibold text-slate-900">{user?.username}</p>
+                                            <p className="text-xs text-slate-500">{user?.email}</p>
                                         </div>
-                                        <div className="absolute bottom-0 right-0 w-3 h-3 bg-emerald-500 border-2 border-white rounded-full"></div>
+                                        <div className="relative">
+                                            <div className="w-10 h-10 rounded-full bg-gradient-to-r from-blue-600 to-indigo-600 flex items-center justify-center text-white font-bold shadow-lg">
+                                                {user?.username?.charAt(0).toUpperCase()}
+                                            </div>
+                                            <div className="absolute bottom-0 right-0 w-3 h-3 bg-emerald-500 border-2 border-white rounded-full"></div>
+                                        </div>
                                     </div>
-                                </Link>
+                                ) : (
+                                    <Link to="/profile" className="flex items-center space-x-3 group cursor-pointer">
+                                        <div className="text-right hidden sm:block">
+                                            <p className="text-sm font-semibold text-slate-900 group-hover:text-blue-600 transition-colors">{user?.username}</p>
+                                            <p className="text-xs text-slate-500">{user?.email}</p>
+                                        </div>
+                                        <div className="relative">
+                                            <div className="w-10 h-10 rounded-full bg-gradient-to-r from-blue-600 to-indigo-600 flex items-center justify-center text-white font-bold shadow-lg group-hover:scale-105 transition-transform">
+                                                {user?.username?.charAt(0).toUpperCase()}
+                                            </div>
+                                            <div className="absolute bottom-0 right-0 w-3 h-3 bg-emerald-500 border-2 border-white rounded-full"></div>
+                                        </div>
+                                    </Link>
+                                )}
                                 <button
                                     onClick={handleLogout}
                                     className="p-2.5 text-slate-500 hover:text-red-600 hover:bg-red-50 rounded-xl transition-all duration-300"

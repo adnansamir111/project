@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import type { User, Organization, UserOrganization } from '@/types';
-import { authApi } from '@/lib/api';
+import { authApi, organizationsApi } from '@/lib/api';
 
 interface AuthState {
     user: User | null;
@@ -17,6 +17,7 @@ interface AuthState {
     setCurrentOrganizationRole: (role: 'OWNER' | 'ADMIN' | 'MEMBER' | null) => void;
     setUserOrganizations: (orgs: UserOrganization[]) => void;
     switchOrganization: (orgId: number) => void;
+    refreshUserOrganizations: () => Promise<void>;
     logout: () => void;
 }
 
@@ -130,6 +131,15 @@ export const useAuthStore = create<AuthState>()(
                     console.error('❌ Organization not found in userOrganizations list!');
                     console.error('Available org IDs:', orgs.map(o => o.organization_id));
                     console.error('Tried to find org ID:', orgId);
+                }
+            },
+
+            refreshUserOrganizations: async () => {
+                try {
+                    const orgs = await organizationsApi.getUserOrganizations();
+                    get().setUserOrganizations(orgs);
+                } catch (error) {
+                    console.error('Failed to refresh user organizations:', error);
                 }
             },
 
